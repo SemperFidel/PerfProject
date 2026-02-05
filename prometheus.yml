@@ -11,8 +11,12 @@ scrape_configs:
 
   - job_name: 'spring-boot-actuator'
     static_configs:
-      - targets: ["spring-mock:8086"]
+      - targets: [ "spring-mock:8086" ]
+        labels:
+          app: "spring-mock"
 
   - job_name: "node_exporter"
     static_configs:
-      - targets: ["node-exporter:9100"]
+      - targets: [ "node-exporter:9100" ]
+        labels:
+          app: "node-exporter"
