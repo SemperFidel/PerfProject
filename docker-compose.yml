@@ -1,6 +1,6 @@
 services:
   spring-mock:
-    image: perflab-project-mock:${BUILD_NUMBER}
+    image: perflab-project-mock:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -20,10 +20,10 @@ services:
     environment:
       - KAFKA_NODE_ID=1
       - KAFKA_PROCESS_ROLES=controller,broker
-      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka-broker:9093
       - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-broker:9092
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
 
       - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
@@ -37,7 +37,7 @@ services:
     networks:
       - mock-net
     healthcheck:
-      test: [ "CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092" ]
+      test: [ "CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "kafka-broker:9092" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -87,7 +87,9 @@ services:
     ports:
       - "9100:9100"
     volumes:
-      - '/:/host:ro,rslave'
+      - '/proc:/host/proc:ro'
+      - '/sys:/host/sys:ro'
+      - '/:/host:ro'
     command:
       - '--path.rootfs=/host'
     pid: host
@@ -97,11 +99,28 @@ services:
     networks:
       - mock-net
 
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka-exporter
+    command:
+      - "--kafka.server=kafka-broker:9092"
+    ports:
+      - "9308:9308"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - mock-net
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password
     volumes:
       - grafana-data:/var/lib/grafana
     depends_on:
