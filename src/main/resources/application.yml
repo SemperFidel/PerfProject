@@ -19,4 +19,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      access: read_only
